@@ -72,6 +72,31 @@
           <span class="dot"></span>
           <span id="statusText">Loading dog detector...</span>
         </div>
+
+        <section class="catch-intel" aria-label="catch intel">
+          <div class="section-head compact-head">
+            <h2>Catch Intel</h2>
+            <span class="mini-label" id="streakBadge">0 streak</span>
+          </div>
+          <div class="intel-grid">
+            <article class="intel-card">
+              <p class="intel-label">Latest scan</p>
+              <strong id="intelSpecies">Waiting for a dog</strong>
+              <p class="intel-copy" id="intelHint">Point the camera at a real dog to unlock a new Puppymon profile.</p>
+            </article>
+            <article class="intel-card">
+              <p class="intel-label">Field notes</p>
+              <div class="intel-tags" id="intelTraits">
+                <span>No traits yet</span>
+              </div>
+            </article>
+            <article class="intel-card">
+              <p class="intel-label">Active zone</p>
+              <strong id="intelLocation">Location pending</strong>
+              <p class="intel-copy" id="intelConfidence">Detector confidence will appear here.</p>
+            </article>
+          </div>
+        </section>
       </section>
 
       <section class="collection-panel" aria-label="collection and map">
@@ -158,6 +183,8 @@
           <span id="profileTime">Seen:</span>
         </div>
         <p class="profile-detail-line" id="profileTraits"></p>
+        <div class="profile-badges" id="profileBadges"></div>
+        <div class="profile-meta-list" id="profileMetaList"></div>
         <div class="bars" id="profileStats"></div>
         <div class="sheet-actions">
           <button class="primary-btn" id="closeProfileBtn">Back to dex</button>

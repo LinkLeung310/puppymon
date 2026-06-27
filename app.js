@@ -19,6 +19,7 @@ const rarityMix = document.querySelector("#rarityMix");
 const mapMode = document.querySelector("#mapMode");
 const mapNote = document.querySelector("#mapNote");
 const resetBtn = document.querySelector("#resetBtn");
+const streakBadge = document.querySelector("#streakBadge");
 const namingSheet = document.querySelector("#namingSheet");
 const sheetPhoto = document.querySelector("#sheetPhoto");
 const sheetBreed = document.querySelector("#sheetBreed");
@@ -35,8 +36,15 @@ const profileRarity = document.querySelector("#profileRarity");
 const profileLocation = document.querySelector("#profileLocation");
 const profileTime = document.querySelector("#profileTime");
 const profileTraits = document.querySelector("#profileTraits");
+const profileBadges = document.querySelector("#profileBadges");
+const profileMetaList = document.querySelector("#profileMetaList");
 const profileStats = document.querySelector("#profileStats");
 const closeProfileBtn = document.querySelector("#closeProfileBtn");
+const intelSpecies = document.querySelector("#intelSpecies");
+const intelHint = document.querySelector("#intelHint");
+const intelTraits = document.querySelector("#intelTraits");
+const intelLocation = document.querySelector("#intelLocation");
+const intelConfidence = document.querySelector("#intelConfidence");
 
 const names = ["Biscuit", "Rocket", "Miso", "Pixel", "Noodle", "Scout", "Maple", "Ziggy", "Pepper", "Tango"];
 const rarities = [
@@ -52,10 +60,25 @@ let detectorModel = null;
 let breedModel = null;
 let currentCoords = null;
 let pendingCatch = null;
+let lastDetection = null;
 let collection = JSON.parse(localStorage.getItem("puppymon.collection") || "[]");
 
 function save() {
   localStorage.setItem("puppymon.collection", JSON.stringify(collection));
+}
+
+function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;",
+  }[char]));
+}
+
+function joinBits(values) {
+  return values.join(" • ");
 }
 
 function formatCapturedAt(iso) {
@@ -72,6 +95,34 @@ function formatCapturedAt(iso) {
 function updateStatus(text, badge = null) {
   statusText.textContent = text;
   if (badge) detectionChip.textContent = badge;
+}
+
+function classifyEncounter(score) {
+  if (score >= 0.9) return "alpha encounter";
+  if (score >= 0.8) return "strong encounter";
+  if (score >= 0.68) return "steady encounter";
+  return "wild encounter";
+}
+
+function buildCatchBadges(dog) {
+  return [
+    dog.rarity,
+    `LV ${dog.level}`,
+    `${Math.round(dog.detectionScore * 100)}% match`,
+    dog.encounterType || classifyEncounter(dog.detectionScore),
+  ];
+}
+
+function getCatchStreak() {
+  if (collection.length === 0) return 0;
+  let streak = 1;
+  for (let i = collection.length - 1; i > 0; i -= 1) {
+    const current = new Date(collection[i].capturedAt).getTime();
+    const previous = new Date(collection[i - 1].capturedAt).getTime();
+    if (Number.isNaN(current) || Number.isNaN(previous) || current - previous > 1000 * 60 * 60 * 8) break;
+    streak += 1;
+  }
+  return streak;
 }
 
 function clearDetectionBox() {
@@ -94,7 +145,7 @@ function drawDetectionBox(detection) {
 
 function pickRarity(score) {
   const boosted = Math.min(100, Math.round(score * 100) + Math.floor(Math.random() * 8));
-  let roll = Math.max(1, boosted - Math.floor(Math.random() * 30));
+  const roll = Math.max(1, boosted - Math.floor(Math.random() * 30));
   let cursor = 0;
   return rarities.find((rarity) => {
     cursor += rarity.weight;
@@ -159,6 +210,7 @@ function createDogProfile(details) {
   const level = Math.floor(1 + details.detection.score * 20 + rarities.indexOf(rarity) * 4);
   const baseName = names[Math.floor(Math.random() * names.length)];
   const statsSeed = details.traits.join("|").length + Math.round(details.detection.score * 100);
+  const encounterType = classifyEncounter(details.detection.score);
   return {
     id: crypto.randomUUID(),
     name: baseName,
@@ -172,6 +224,7 @@ function createDogProfile(details) {
     photo: details.photo,
     cropPhoto: details.cropPhoto,
     location: details.location,
+    encounterType,
     stats: {
       zoom: Math.min(99, 40 + (statsSeed % 50)),
       charm: Math.min(99, 45 + ((statsSeed * 3) % 45)),
@@ -191,12 +244,12 @@ function renderCards() {
     node.querySelector(".breed-line").textContent = dog.speciesGuess;
     node.querySelector(".level").textContent = `LV ${dog.level}`;
     const profileBits = [
-      `Traits: ${dog.traits.join(" • ")}`,
+      `Traits: ${joinBits(dog.traits)}`,
       dog.location?.label || "location unavailable",
       formatCapturedAt(dog.capturedAt),
       `${Math.round(dog.detectionScore * 100)}% dog match`,
     ];
-    node.querySelector(".profile-line").innerHTML = `<strong>Seen at</strong> ${profileBits.join(" • ")}`;
+    node.querySelector(".profile-line").innerHTML = `<strong>Seen at</strong> ${escapeHtml(joinBits(profileBits))}`;
     node.querySelector(".bars").innerHTML = stats.map((key) => `
       <div class="bar">
         <span>${key}</span>
@@ -217,9 +270,7 @@ function renderCards() {
 }
 
 function projectMarker(location, center) {
-  if (!location?.coords || !center) {
-    return { left: 50, top: 50 };
-  }
+  if (!location?.coords || !center) return { left: 50, top: 50 };
   const latScale = 0.015;
   const lngScale = 0.02;
   const dx = ((location.coords.longitude - center.longitude) / lngScale) * 50;
@@ -274,10 +325,38 @@ function renderStats() {
   }).join("");
 }
 
+function renderIntel() {
+  streakBadge.textContent = `${getCatchStreak()} streak`;
+  if (!lastDetection) {
+    const latestSaved = collection[collection.length - 1];
+    intelSpecies.textContent = latestSaved?.speciesGuess || "Waiting for a dog";
+    intelHint.textContent = latestSaved
+      ? `${collection.length} dogs logged. Open the camera to add the next local find.`
+      : "Point the camera at a real dog to unlock a new Puppymon profile.";
+    intelTraits.innerHTML = latestSaved
+      ? latestSaved.traits.map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")
+      : "<span>No traits yet</span>";
+    intelLocation.textContent = currentCoords
+      ? `${currentCoords.latitude.toFixed(4)}, ${currentCoords.longitude.toFixed(4)}`
+      : latestSaved?.location?.label || "Location pending";
+    intelConfidence.textContent = latestSaved
+      ? `${Math.round(latestSaved.detectionScore * 100)}% dog match from the latest saved catch.`
+      : "Detector confidence will appear here.";
+    return;
+  }
+
+  intelSpecies.textContent = lastDetection.speciesGuess;
+  intelHint.textContent = `Latest scan reads as a ${classifyEncounter(lastDetection.detection.score)}. Name it to save the entry.`;
+  intelTraits.innerHTML = lastDetection.traits.map((trait) => `<span>${escapeHtml(trait)}</span>`).join("");
+  intelLocation.textContent = lastDetection.location?.label || "Location unavailable";
+  intelConfidence.textContent = `${Math.round(lastDetection.detection.score * 100)}% dog match`;
+}
+
 function renderAll() {
   renderCards();
   renderMap();
   renderStats();
+  renderIntel();
 }
 
 function openProfileSheet(dog) {
@@ -287,7 +366,18 @@ function openProfileSheet(dog) {
   profileRarity.textContent = `Rarity: ${dog.rarity}`;
   profileLocation.textContent = `Spot: ${dog.location?.label || "location unavailable"}`;
   profileTime.textContent = `Seen: ${formatCapturedAt(dog.capturedAt)}`;
-  profileTraits.textContent = `Traits: ${dog.traits.join(" • ")} • ${Math.round(dog.detectionScore * 100)}% dog match`;
+  profileTraits.textContent = `Traits: ${joinBits(dog.traits)} • ${Math.round(dog.detectionScore * 100)}% dog match`;
+  profileBadges.innerHTML = buildCatchBadges(dog).map((badge) => `<span>${escapeHtml(badge)}</span>`).join("");
+  profileMetaList.innerHTML = [
+    { label: "Encounter type", value: dog.encounterType || classifyEncounter(dog.detectionScore) },
+    { label: "Stored frame", value: dog.cropPhoto ? "full shot + dog crop" : "full shot only" },
+    { label: "Nearest spot", value: dog.location?.label || "location unavailable" },
+  ].map((item) => `
+    <div class="profile-meta-item">
+      <span class="profile-meta-label">${escapeHtml(item.label)}</span>
+      <strong class="profile-meta-value">${escapeHtml(item.value)}</strong>
+    </div>
+  `).join("");
   profileStats.innerHTML = stats.map((key) => `
     <div class="bar">
       <span>${key}</span>
@@ -422,7 +512,7 @@ function openNamingSheet(profile) {
   pendingCatch = profile;
   sheetPhoto.src = profile.photo;
   sheetBreed.textContent = `Breed: ${profile.speciesGuess}`;
-  sheetTraits.textContent = `Traits: ${profile.traits.join(" • ")}`;
+  sheetTraits.textContent = `Traits: ${joinBits(profile.traits)}`;
   sheetLocation.textContent = `Spot: ${profile.location?.label || "location unavailable"}`;
   nameInput.value = profile.name;
   namingSheet.classList.remove("hidden");
@@ -441,6 +531,8 @@ async function runCatch() {
   const details = await detectDogFromSnapshot();
   if (!details) {
     clearDetectionBox();
+    lastDetection = null;
+    renderIntel();
     updateStatus("No dog detected in that shot. Try a clearer dog photo.", "no dog found");
     snapBtn.disabled = false;
     return;
@@ -451,6 +543,10 @@ async function runCatch() {
     ...details,
     location,
   });
+  lastDetection = {
+    ...details,
+    location,
+  };
   resultName.textContent = profile.name;
   resultBurst.classList.remove("show");
   void resultBurst.offsetWidth;
@@ -459,6 +555,7 @@ async function runCatch() {
     "Dog found. Name your new Puppymon to save it.",
     `dog ${Math.round(profile.detectionScore * 100)}%`,
   );
+  renderIntel();
   openNamingSheet(profile);
   snapBtn.disabled = false;
 }
@@ -476,7 +573,7 @@ cameraBtn.addEventListener("click", openCamera);
 snapBtn.addEventListener("click", async () => {
   await ensureModels();
   if (stream && camera.videoWidth) {
-    runCatch();
+    await runCatch();
     return;
   }
   updateStatus("Opening the phone camera for a fresh catch.", "camera picker");
@@ -520,6 +617,7 @@ closeProfileBtn.addEventListener("click", closeProfileSheet);
 
 resetBtn.addEventListener("click", () => {
   collection = [];
+  lastDetection = null;
   save();
   clearDetectionBox();
   updateStatus("Puppydex cleared. Fresh walk, fresh finds.", "reset");
