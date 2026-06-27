@@ -4,7 +4,7 @@ const snapshot = document.querySelector("#snapshot");
 const viewport = document.querySelector("#viewport");
 const cameraBtn = document.querySelector("#cameraBtn");
 const snapBtn = document.querySelector("#snapBtn");
-const demoBtn = document.querySelector("#demoBtn");
+const galleryBtn = document.querySelector("#galleryBtn");
 const statusText = document.querySelector("#statusText");
 const detectionChip = document.querySelector("#detectionChip");
 const caughtCount = document.querySelector("#caughtCount");
@@ -27,6 +27,16 @@ const sheetLocation = document.querySelector("#sheetLocation");
 const nameInput = document.querySelector("#nameInput");
 const saveCatchBtn = document.querySelector("#saveCatchBtn");
 const cancelCatchBtn = document.querySelector("#cancelCatchBtn");
+const profileSheet = document.querySelector("#profileSheet");
+const profileName = document.querySelector("#profileName");
+const profilePhoto = document.querySelector("#profilePhoto");
+const profileBreed = document.querySelector("#profileBreed");
+const profileRarity = document.querySelector("#profileRarity");
+const profileLocation = document.querySelector("#profileLocation");
+const profileTime = document.querySelector("#profileTime");
+const profileTraits = document.querySelector("#profileTraits");
+const profileStats = document.querySelector("#profileStats");
+const closeProfileBtn = document.querySelector("#closeProfileBtn");
 
 const names = ["Biscuit", "Rocket", "Miso", "Pixel", "Noodle", "Scout", "Maple", "Ziggy", "Pepper", "Tango"];
 const rarities = [
@@ -42,6 +52,7 @@ let detectorModel = null;
 let breedModel = null;
 let currentCoords = null;
 let pendingCatch = null;
+let latestDetection = null;
 let collection = JSON.parse(localStorage.getItem("puppymon.collection") || "[]");
 
 function save() {
@@ -62,6 +73,24 @@ function formatCapturedAt(iso) {
 function updateStatus(text, badge = null) {
   statusText.textContent = text;
   if (badge) detectionChip.textContent = badge;
+}
+
+function clearDetectionBox() {
+  viewport.querySelectorAll(".detection-box").forEach((node) => node.remove());
+}
+
+function drawDetectionBox(detection) {
+  clearDetectionBox();
+  if (!detection) return;
+  const [x, y, width, height] = detection.bbox;
+  const box = document.createElement("div");
+  box.className = "detection-box";
+  box.style.left = `${(x / snapshot.width) * 100}%`;
+  box.style.top = `${(y / snapshot.height) * 100}%`;
+  box.style.width = `${(width / snapshot.width) * 100}%`;
+  box.style.height = `${(height / snapshot.height) * 100}%`;
+  box.innerHTML = `<span>Dog ${Math.round(detection.score * 100)}%</span>`;
+  viewport.appendChild(box);
 }
 
 function pickRarity(score) {
@@ -156,6 +185,13 @@ function renderCards() {
         <span>${dog.stats[key]}</span>
       </div>
     `).join("");
+    node.addEventListener("click", () => openProfileSheet(dog));
+    node.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        openProfileSheet(dog);
+      }
+    });
     cardGrid.prepend(node);
   });
   caughtCount.textContent = collection.length;
@@ -225,6 +261,28 @@ function renderAll() {
   renderCards();
   renderMap();
   renderStats();
+}
+
+function openProfileSheet(dog) {
+  profileName.textContent = dog.name;
+  profilePhoto.src = dog.photo;
+  profileBreed.textContent = `Breed: ${dog.speciesGuess}`;
+  profileRarity.textContent = `Rarity: ${dog.rarity}`;
+  profileLocation.textContent = `Spot: ${dog.location?.label || "location unavailable"}`;
+  profileTime.textContent = `Seen: ${formatCapturedAt(dog.capturedAt)}`;
+  profileTraits.textContent = `Traits: ${dog.traits.join(" • ")}`;
+  profileStats.innerHTML = stats.map((key) => `
+    <div class="bar">
+      <span>${key}</span>
+      <span class="track"><span class="fill" style="--value:${dog.stats[key]}%; background:${dog.color}"></span></span>
+      <span>${dog.stats[key]}</span>
+    </div>
+  `).join("");
+  profileSheet.classList.remove("hidden");
+}
+
+function closeProfileSheet() {
+  profileSheet.classList.add("hidden");
 }
 
 async function ensureModels() {
@@ -320,6 +378,8 @@ async function detectDogFromSnapshot() {
   const ctx = snapshot.getContext("2d");
   const sample = extractColorProfile(ctx, best.bbox);
   const traits = traitsFromPixels(sample);
+  latestDetection = best;
+  drawDetectionBox(best);
   return {
     detection: best,
     speciesGuess: likelyDogLabel ? likelyDogLabel.className : "mixed-breed dog",
@@ -346,25 +406,14 @@ function closeNamingSheet() {
 
 async function runCatch(isDemo = false) {
   snapBtn.disabled = true;
-  if (!isDemo) {
-    captureFrame();
-  }
-  updateStatus(isDemo ? "Running a quick demo catch." : "Scanning this photo for a real dog...", "scanning");
-  let details;
-  if (isDemo) {
-    details = {
-      detection: { score: 0.81 },
-      speciesGuess: "mixed-breed dog",
-      traits: ["warm coat", "mid-tone fur", "medium build"],
-      photo: snapshot.toDataURL("image/jpeg", 0.92) || "",
-    };
-  } else {
-    details = await detectDogFromSnapshot();
-    if (!details) {
-      updateStatus("No dog detected in that shot. Try a clearer dog photo.", "no dog found");
-      snapBtn.disabled = false;
-      return;
-    }
+  captureFrame();
+  updateStatus("Scanning this photo for a real dog...", "scanning");
+  const details = await detectDogFromSnapshot();
+  if (!details) {
+    clearDetectionBox();
+    updateStatus("No dog detected in that shot. Try a clearer dog photo.", "no dog found");
+    snapBtn.disabled = false;
+    return;
   }
   const location = await readLocation();
   const profile = createDogProfile({
@@ -399,20 +448,9 @@ snapBtn.addEventListener("click", async () => {
   updateStatus("Opening the phone camera for a fresh catch.", "camera picker");
   photoInput.click();
 });
-demoBtn.addEventListener("click", async () => {
-  await ensureModels();
-  if (!snapshot.width || !snapshot.height) {
-    const ctx = snapshot.getContext("2d");
-    snapshot.width = 960;
-    snapshot.height = 720;
-    ctx.fillStyle = "#f7d8c8";
-    ctx.fillRect(0, 0, snapshot.width, snapshot.height);
-    ctx.fillStyle = "#151515";
-    ctx.font = "bold 42px sans-serif";
-    ctx.fillText("Demo Pup", 60, 110);
-  }
-  viewport.classList.add("has-snapshot");
-  runCatch(true);
+galleryBtn.addEventListener("click", () => {
+  updateStatus("Opening photo roll. A real dog still needs to be detected to save.", "photo roll");
+  photoInput.click();
 });
 photoInput.addEventListener("change", async () => {
   const file = photoInput.files?.[0];
@@ -442,6 +480,8 @@ cancelCatchBtn.addEventListener("click", () => {
   closeNamingSheet();
   updateStatus("Catch canceled. Nothing was added.", "canceled");
 });
+
+closeProfileBtn.addEventListener("click", closeProfileSheet);
 
 resetBtn.addEventListener("click", () => {
   collection = [];

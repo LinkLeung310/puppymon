@@ -63,8 +63,8 @@
           <button class="snap-btn" id="snapBtn" aria-label="Snap dog">
             <span></span>
           </button>
-          <button class="icon-btn" id="demoBtn" title="Demo catch" aria-label="Demo catch">
-            <span class="icon">TRY</span>
+          <button class="icon-btn" id="galleryBtn" title="Use photo" aria-label="Use photo">
+            <span class="icon">ROLL</span>
           </button>
         </div>
 
@@ -131,7 +131,7 @@
     </section>
 
     <template id="cardTemplate">
-      <article class="dog-card">
+      <article class="dog-card" tabindex="0">
         <img class="card-photo" alt="Collected dog photo" />
         <div class="card-meta">
           <div>
@@ -145,6 +145,25 @@
         <div class="bars"></div>
       </article>
     </template>
+
+    <section class="profile-sheet hidden" id="profileSheet" aria-label="collected dog profile">
+      <div class="sheet-card profile-sheet-card">
+        <p class="sheet-kicker">Collected profile</p>
+        <h2 id="profileName">Puppymon</h2>
+        <img id="profilePhoto" alt="Collected dog profile photo" />
+        <div class="sheet-facts">
+          <span id="profileBreed">Breed:</span>
+          <span id="profileRarity">Rarity:</span>
+          <span id="profileLocation">Spot:</span>
+          <span id="profileTime">Seen:</span>
+        </div>
+        <p class="profile-detail-line" id="profileTraits"></p>
+        <div class="bars" id="profileStats"></div>
+        <div class="sheet-actions">
+          <button class="primary-btn" id="closeProfileBtn">Back to dex</button>
+        </div>
+      </div>
+    </section>
 
     <script src="./app.js"></script>
   </body>
