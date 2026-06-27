@@ -13,3 +13,7 @@ Puppymon is a mobile-first web prototype for catching real-world dogs as collect
 ## Run
 
 Open `index.html` in a browser. For live camera access, serve it from HTTPS or localhost.
+
+## Deploy
+
+The repository includes a GitHub Pages workflow that deploys the site from the `main` branch.
