@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Puppymon</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="capture-panel" aria-label="camera capture">
+        <header class="topbar">
+          <div>
+            <p class="kicker">Puppymon</p>
+            <h1>Puppydex</h1>
+          </div>
+          <div class="score-pill" aria-label="collection count">
+            <span id="caughtCount">0</span>
+            <span>caught</span>
+          </div>
+        </header>
+
+        <div class="viewport" id="viewport">
+          <video id="camera" playsinline muted></video>
+          <input id="photoInput" class="photo-input" type="file" accept="image/*" capture="environment" />
+          <canvas id="snapshot" width="960" height="720"></canvas>
+          <div class="scan-grid" aria-hidden="true"></div>
+          <div class="focus-ring" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+          </div>
+          <div class="result-burst" id="resultBurst">
+            <div class="burst-card">
+              <p id="resultLabel">New friend found</p>
+              <strong id="resultName">Mochi</strong>
+            </div>
+          </div>
+          <div class="empty-camera" id="emptyCamera">
+            <svg viewBox="0 0 260 220" role="img" aria-label="cartoon dog portrait">
+              <path d="M75 68c-27 6-45 33-42 64 4 44 43 71 94 68 54-3 90-32 92-75 2-34-18-59-49-65-22-5-73 3-95 8z" fill="#f7d67b" stroke="#151515" stroke-width="7"/>
+              <path d="M57 72C39 38 61 18 89 43c11 10 15 24 11 38" fill="#e95d4f" stroke="#151515" stroke-width="7" stroke-linejoin="round"/>
+              <path d="M176 66c24-30 51-13 44 21-4 19-18 31-38 34" fill="#2e9d82" stroke="#151515" stroke-width="7" stroke-linejoin="round"/>
+              <circle cx="102" cy="112" r="10" fill="#151515"/>
+              <circle cx="160" cy="107" r="10" fill="#151515"/>
+              <path d="M124 134c8 8 22 7 31-3" fill="none" stroke="#151515" stroke-width="7" stroke-linecap="round"/>
+              <path d="M131 119c5-7 18-7 23 0-2 8-7 12-13 12s-10-4-10-12z" fill="#151515"/>
+            </svg>
+          </div>
+        </div>
+
+        <div class="camera-actions">
+          <button class="icon-btn" id="cameraBtn" title="Open camera" aria-label="Open camera">
+            <span class="icon">CAM</span>
+          </button>
+          <button class="snap-btn" id="snapBtn" aria-label="Snap dog">
+            <span></span>
+          </button>
+          <button class="icon-btn" id="demoBtn" title="Demo catch" aria-label="Demo catch">
+            <span class="icon">TRY</span>
+          </button>
+        </div>
+
+        <div class="status-strip" id="statusStrip">
+          <span class="dot"></span>
+          <span id="statusText">Ready for a quick catch.</span>
+        </div>
+      </section>
+
+      <section class="collection-panel" aria-label="collection and map">
+        <nav class="tabs" aria-label="views">
+          <button class="tab active" data-view="cards">Cards</button>
+          <button class="tab" data-view="map">Map</button>
+          <button class="tab" data-view="stats">Stats</button>
+        </nav>
+
+        <div class="view active" id="cardsView">
+          <div class="section-head">
+            <h2>Collection</h2>
+            <button class="mini-btn" id="resetBtn">Reset</button>
+          </div>
+          <div class="card-grid" id="cardGrid"></div>
+        </div>
+
+        <div class="view" id="mapView">
+          <div class="section-head">
+            <h2>Nearby Finds</h2>
+            <span class="mini-label">live-style mock</span>
+          </div>
+          <div class="map-board" id="mapBoard">
+            <div class="street s1"></div>
+            <div class="street s2"></div>
+            <div class="street s3"></div>
+            <div class="park"></div>
+          </div>
+        </div>
+
+        <div class="view" id="statsView">
+          <div class="section-head">
+            <h2>Dex Stats</h2>
+            <span class="mini-label" id="rarityMix">fresh run</span>
+          </div>
+          <div class="stat-list" id="statList"></div>
+        </div>
+      </section>
+    </main>
+
+    <template id="cardTemplate">
+      <article class="dog-card">
+        <div class="card-art"></div>
+        <div class="card-meta">
+          <div>
+            <p class="rarity"></p>
+            <h3></h3>
+          </div>
+          <span class="level"></span>
+        </div>
+        <div class="bars"></div>
+      </article>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
