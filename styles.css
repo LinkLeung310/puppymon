@@ -85,6 +85,13 @@ input {
   flex-wrap: wrap;
 }
 
+.map-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .toolbar-group {
   display: flex;
   align-items: center;
@@ -987,6 +994,11 @@ h3 {
 
   .section-head {
     align-items: flex-start;
+  }
+
+  .map-head-actions {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .card-grid {

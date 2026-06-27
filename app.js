@@ -19,6 +19,7 @@ const statList = document.querySelector("#statList");
 const rarityMix = document.querySelector("#rarityMix");
 const mapMode = document.querySelector("#mapMode");
 const mapNote = document.querySelector("#mapNote");
+const locateBtn = document.querySelector("#locateBtn");
 const resetBtn = document.querySelector("#resetBtn");
 const streakBadge = document.querySelector("#streakBadge");
 const namingSheet = document.querySelector("#namingSheet");
@@ -79,6 +80,7 @@ const copy = {
     collected_dogs: "Collected Dogs",
     reset: "Reset",
     catch_map: "Catch Map",
+    locate_me: "Locate me",
     puppydex: "Puppydex",
     name_your_puppymon: "Name your Puppymon",
     name_label: "Name",
@@ -130,6 +132,8 @@ const copy = {
     live_map_note: "Pins are placed on the real map using the coordinates saved for each dog.",
     no_location_map_note: "Location permission is off or unavailable, so the world map centers on a default view.",
     you_marker: "You are here",
+    live_position_on: "Live position on",
+    locating_you: "Finding your current position...",
     breed_label: "Breed",
     traits_label: "Traits",
     spot_label: "Spot",
@@ -186,6 +190,7 @@ const copy = {
     collected_dogs: "已收集狗狗",
     reset: "重置",
     catch_map: "捕捉地图",
+    locate_me: "定位我",
     puppydex: "狗狗图鉴",
     name_your_puppymon: "给你的 Puppymon 命名",
     name_label: "名字",
@@ -237,6 +242,8 @@ const copy = {
     live_map_note: "每只狗狗都会按保存时的经纬度落在真实地图上。",
     no_location_map_note: "如果没有定位权限，地图会显示默认视角，之后拿到定位再自动更新。",
     you_marker: "你在这里",
+    live_position_on: "实时定位中",
+    locating_you: "正在获取你当前的位置...",
     breed_label: "种类",
     traits_label: "特征",
     spot_label: "地点",
@@ -284,10 +291,15 @@ let tileLayer = null;
 let playerMarker = null;
 let dogMarkers = [];
 let currentCoords = null;
+let watchId = null;
 let pendingCatch = null;
 let lastDetection = null;
 let currentLang = localStorage.getItem("puppymon.lang") || "en";
 let collection = JSON.parse(localStorage.getItem("puppymon.collection") || "[]");
+const PHOTO_MAX_SIDE = 960;
+const DETECTION_MAX_SIDE = 640;
+const BREED_MAX_SIDE = 320;
+const EXPORT_QUALITY = 0.84;
 
 function save() {
   localStorage.setItem("puppymon.collection", JSON.stringify(collection));
@@ -466,6 +478,18 @@ function cropDogImage(box) {
   return cropCanvas;
 }
 
+function resizeCanvasToFit(source, maxSide) {
+  const width = source.width || source.videoWidth || source.naturalWidth || 1;
+  const height = source.height || source.videoHeight || source.naturalHeight || 1;
+  const scale = Math.min(1, maxSide / Math.max(width, height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(width * scale));
+  canvas.height = Math.max(1, Math.round(height * scale));
+  const ctx = canvas.getContext("2d", { willReadFrequently: false });
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+  return { canvas, scale };
+}
+
 function createDogProfile(details) {
   const rarity = pickRarity(details.detection.score);
   const level = Math.floor(1 + details.detection.score * 20 + rarities.indexOf(rarity) * 4);
@@ -565,7 +589,7 @@ function renderMap() {
   if (!map) return;
 
   const coords = currentCoords;
-  mapMode.textContent = t("world_map_ready");
+  mapMode.textContent = coords ? t("live_position_on") : t("world_map_ready");
   mapNote.textContent = coords ? t("live_map_note") : t("no_location_map_note");
 
   if (coords) {
@@ -715,6 +739,35 @@ async function readLocation() {
   });
 }
 
+function handlePositionUpdate(position) {
+  currentCoords = {
+    latitude: position.coords.latitude,
+    longitude: position.coords.longitude,
+  };
+  if (map) {
+    renderMap();
+  }
+}
+
+function startLocationWatch() {
+  if (!navigator.geolocation || watchId !== null) return;
+  watchId = navigator.geolocation.watchPosition(
+    (position) => handlePositionUpdate(position),
+    () => {},
+    { enableHighAccuracy: true, maximumAge: 15000, timeout: 10000 },
+  );
+}
+
+function centerOnPlayer() {
+  if (!map) return;
+  if (currentCoords) {
+    map.setView([currentCoords.latitude, currentCoords.longitude], 16);
+    return;
+  }
+  updateStatus(t("locating_you"), t("live_camera_badge"));
+  void readLocation().then(() => renderMap());
+}
+
 async function openCamera() {
   try {
     await ensureModels();
@@ -752,8 +805,7 @@ function loadPhoto(file) {
     const img = new Image();
     img.onload = () => {
       const ctx = snapshot.getContext("2d");
-      const maxSide = 1200;
-      const scale = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+      const scale = Math.min(1, PHOTO_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
       snapshot.width = Math.max(1, Math.round(img.naturalWidth * scale));
       snapshot.height = Math.max(1, Math.round(img.naturalHeight * scale));
       ctx.drawImage(img, 0, 0, snapshot.width, snapshot.height);
@@ -768,31 +820,46 @@ function loadPhoto(file) {
 
 async function detectDogFromSnapshot() {
   await ensureModels();
-  const detections = await detectorModel.detect(snapshot, 4, 0.45);
+  const { canvas: detectionCanvas, scale } = resizeCanvasToFit(snapshot, DETECTION_MAX_SIDE);
+  const detections = await detectorModel.detect(detectionCanvas, 4, 0.45);
   const dogDetections = detections
     .filter((item) => item.class === "dog" && item.score >= 0.55)
     .sort((a, b) => b.score - a.score);
   if (dogDetections.length === 0) return null;
 
-  const best = dogDetections[0];
+  const detected = dogDetections[0];
+  const best = {
+    ...detected,
+    bbox: detected.bbox.map((value) => value / scale),
+  };
+  const ctx = snapshot.getContext("2d");
+  const sample = extractColorProfile(ctx, best.bbox);
+  const traits = traitsFromPixels(sample);
   const cropCanvas = cropDogImage(best.bbox);
-  const breedPredictions = await breedModel.classify(cropCanvas, 5);
+  drawDetectionBox(best);
+
+  return {
+    detection: best,
+    traits,
+    cropCanvas,
+  };
+}
+
+async function finalizeDogDetails(details) {
+  const breedInput = resizeCanvasToFit(details.cropCanvas, BREED_MAX_SIDE).canvas;
+  const breedPredictions = await breedModel.classify(breedInput, 3);
   const likelyDogLabel = breedPredictions.find((item) =>
     /dog|terrier|retriever|shepherd|husky|poodle|beagle|bulldog|spaniel|corgi|dachshund|akita|shiba|collie|mastiff|chihuahua|boxer|pug/i.test(
       item.className,
     ),
   );
-  const ctx = snapshot.getContext("2d");
-  const sample = extractColorProfile(ctx, best.bbox);
-  const traits = traitsFromPixels(sample);
-  drawDetectionBox(best);
 
   return {
-    detection: best,
+    detection: details.detection,
     speciesGuess: likelyDogLabel ? likelyDogLabel.className : t("mixed_breed_dog"),
-    traits,
-    photo: snapshot.toDataURL("image/jpeg", 0.92),
-    cropPhoto: cropCanvas.toDataURL("image/jpeg", 0.92),
+    traits: details.traits,
+    photo: snapshot.toDataURL("image/jpeg", EXPORT_QUALITY),
+    cropPhoto: details.cropCanvas.toDataURL("image/jpeg", EXPORT_QUALITY),
   };
 }
 
@@ -818,7 +885,9 @@ async function runCatch() {
   setScanState(true, "scan_message");
   updateStatus(t("scanning_status"), t("scanning_badge"));
   try {
-    const details = await detectDogFromSnapshot();
+    const detected = await detectDogFromSnapshot();
+    updateStatus(t("scan_message"), t("scanning_badge"));
+    const details = detected ? await finalizeDogDetails(detected) : null;
     if (!details) {
       clearDetectionBox();
       lastDetection = null;
@@ -828,7 +897,8 @@ async function runCatch() {
     }
 
     setScanState(true, "scan_message_location");
-    const location = await readLocation();
+    const locationPromise = readLocation();
+    const location = await locationPromise;
     const profile = createDogProfile({
       ...details,
       location,
@@ -873,6 +943,8 @@ document.querySelectorAll(".tab").forEach((tab) => {
 langToggle.addEventListener("click", () => {
   setLanguage(currentLang === "en" ? "zh" : "en");
 });
+
+locateBtn.addEventListener("click", centerOnPlayer);
 
 cameraBtn.addEventListener("click", openCamera);
 snapBtn.addEventListener("click", async () => {
@@ -940,5 +1012,6 @@ window.addEventListener("load", async () => {
     updateStatus(t("model_error"), t("model_error_badge"));
   }
   await readLocation();
+  startLocationWatch();
   renderAll();
 });
