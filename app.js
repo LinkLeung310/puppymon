@@ -4,7 +4,6 @@ const snapshot = document.querySelector("#snapshot");
 const viewport = document.querySelector("#viewport");
 const cameraBtn = document.querySelector("#cameraBtn");
 const snapBtn = document.querySelector("#snapBtn");
-const galleryBtn = document.querySelector("#galleryBtn");
 const langToggle = document.querySelector("#langToggle");
 const statusText = document.querySelector("#statusText");
 const detectionChip = document.querySelector("#detectionChip");
@@ -97,9 +96,10 @@ const copy = {
     live_camera_badge: "live camera",
     scanning_badge: "scanning",
     no_dog_badge: "no dog found",
-    photo_roll_badge: "photo roll",
-    photo_loaded_badge: "photo loaded",
     photo_error_badge: "photo error",
+    no_dog_title: "Scan missed",
+    no_dog_name: "Try again",
+    live_capture_only: "Live capture only. Open the camera and snap a dog in the moment.",
     saved_badge: "saved",
     canceled_badge: "canceled",
     reset_badge: "reset",
@@ -108,8 +108,6 @@ const copy = {
     camera_opening: "Opening the phone camera for a fresh catch.",
     live_camera_unavailable: "Live camera unavailable. Opening phone camera instead.",
     phone_camera_opening: "Phone camera opening for a fresh catch.",
-    opening_photo_roll: "Opening photo roll. A real dog still needs to be detected to save.",
-    photo_received: "Photo received. Checking for a dog...",
     photo_error: "Could not read that photo. Try another snap.",
     detector_ready: "Detector ready. Snap a real dog to collect it.",
     model_error: "Model load failed. Camera can still open, but detection is unavailable.",
@@ -124,7 +122,6 @@ const copy = {
     location_pending: "Location pending",
     detector_confidence_here: "Detector confidence will appear here.",
     open_camera: "Open camera",
-    use_photo: "Use photo",
     snap_dog: "Snap dog",
     world_map: "world map",
     world_map_ready: "World map",
@@ -283,6 +280,12 @@ const copy = {
   },
 };
 
+Object.assign(copy.zh, {
+  no_dog_title: "扫描失败",
+  no_dog_name: "重新拍摄",
+  live_capture_only: "仅支持现场拍摄。打开相机，当场拍到狗狗后再收集。",
+});
+
 let stream = null;
 let detectorModel = null;
 let breedModel = null;
@@ -296,6 +299,7 @@ let pendingCatch = null;
 let lastDetection = null;
 let currentLang = localStorage.getItem("puppymon.lang") || "en";
 let collection = JSON.parse(localStorage.getItem("puppymon.collection") || "[]");
+let locationRequest = null;
 const PHOTO_MAX_SIDE = 960;
 const DETECTION_MAX_SIDE = 640;
 const BREED_MAX_SIDE = 320;
@@ -343,8 +347,6 @@ function updateStaticText() {
   cameraBtn.title = t("open_camera");
   cameraBtn.setAttribute("aria-label", t("open_camera"));
   snapBtn.setAttribute("aria-label", t("snap_dog"));
-  galleryBtn.title = t("use_photo");
-  galleryBtn.setAttribute("aria-label", t("use_photo"));
   nameInput.placeholder = currentLang === "zh" ? "给它起个名字" : "Mochi";
 }
 
@@ -361,8 +363,29 @@ function formatCapturedAt(iso) {
 
 function setScanState(active, messageKey = "scan_message") {
   scanOverlay.classList.toggle("hidden", !active);
+  scanOverlay.classList.remove("scan-overlay-fail");
   scanTitle.textContent = t("scan_title");
   scanMessage.textContent = t(messageKey);
+}
+
+function showNoDogFeedback() {
+  clearDetectionBox();
+  resultLabel.textContent = t("no_dog_title");
+  resultName.textContent = t("no_dog_name");
+  resultBurst.classList.remove("show", "fail");
+  void resultBurst.offsetWidth;
+  resultBurst.classList.add("show", "fail");
+  scanOverlay.classList.remove("hidden");
+  scanOverlay.classList.add("scan-overlay-fail");
+  scanTitle.textContent = t("no_dog_title");
+  scanMessage.textContent = t("no_dog");
+  viewport.classList.remove("shake");
+  void viewport.offsetWidth;
+  viewport.classList.add("shake");
+  setTimeout(() => {
+    viewport.classList.remove("shake");
+    setScanState(false);
+  }, 1100);
 }
 
 function updateStatus(text, badge = null) {
@@ -587,6 +610,7 @@ function renderMap() {
   ensureMap();
   clearMapMarkers();
   if (!map) return;
+  map.invalidateSize();
 
   const coords = currentCoords;
   mapMode.textContent = coords ? t("live_position_on") : t("world_map_ready");
@@ -716,7 +740,8 @@ async function readLocation() {
   if (!navigator.geolocation) {
     return { label: t("location_unavailable"), coords: null };
   }
-  return new Promise((resolve) => {
+  if (locationRequest) return locationRequest;
+  locationRequest = new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         currentCoords = {
@@ -725,6 +750,8 @@ async function readLocation() {
         };
         const lat = position.coords.latitude.toFixed(4);
         const lng = position.coords.longitude.toFixed(4);
+        renderIntel();
+        renderMap();
         resolve({
           label: `${lat}, ${lng}`,
           coords: {
@@ -733,10 +760,19 @@ async function readLocation() {
           },
         });
       },
-      () => resolve({ label: t("location_unavailable"), coords: null }),
+      () => {
+        renderIntel();
+        renderMap();
+        resolve({ label: t("location_unavailable"), coords: null });
+      },
       { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 },
     );
   });
+  try {
+    return await locationRequest;
+  } finally {
+    locationRequest = null;
+  }
 }
 
 function handlePositionUpdate(position) {
@@ -744,9 +780,8 @@ function handlePositionUpdate(position) {
     latitude: position.coords.latitude,
     longitude: position.coords.longitude,
   };
-  if (map) {
-    renderMap();
-  }
+  renderIntel();
+  renderMap();
 }
 
 function startLocationWatch() {
@@ -758,14 +793,19 @@ function startLocationWatch() {
   );
 }
 
-function centerOnPlayer() {
+async function centerOnPlayer() {
   if (!map) return;
   if (currentCoords) {
+    map.invalidateSize();
     map.setView([currentCoords.latitude, currentCoords.longitude], 16);
     return;
   }
   updateStatus(t("locating_you"), t("live_camera_badge"));
-  void readLocation().then(() => renderMap());
+  const location = await readLocation();
+  if (location.coords) {
+    map.invalidateSize();
+    map.setView([location.coords.latitude, location.coords.longitude], 16);
+  }
 }
 
 async function openCamera() {
@@ -889,9 +929,9 @@ async function runCatch() {
     updateStatus(t("scan_message"), t("scanning_badge"));
     const details = detected ? await finalizeDogDetails(detected) : null;
     if (!details) {
-      clearDetectionBox();
       lastDetection = null;
       renderIntel();
+      showNoDogFeedback();
       updateStatus(t("no_dog"), t("no_dog_badge"));
       return;
     }
@@ -944,7 +984,9 @@ langToggle.addEventListener("click", () => {
   setLanguage(currentLang === "en" ? "zh" : "en");
 });
 
-locateBtn.addEventListener("click", centerOnPlayer);
+locateBtn.addEventListener("click", () => {
+  void centerOnPlayer();
+});
 
 cameraBtn.addEventListener("click", openCamera);
 snapBtn.addEventListener("click", async () => {
@@ -957,16 +999,11 @@ snapBtn.addEventListener("click", async () => {
   photoInput.click();
 });
 
-galleryBtn.addEventListener("click", () => {
-  updateStatus(t("opening_photo_roll"), t("photo_roll_badge"));
-  photoInput.click();
-});
-
 photoInput.addEventListener("change", async () => {
   const file = photoInput.files?.[0];
   if (!file) return;
   try {
-    updateStatus(t("photo_received"), t("photo_loaded_badge"));
+    updateStatus(t("live_capture_only"), t("camera_picker"));
     await loadPhoto(file);
     await runCatch();
   } catch {

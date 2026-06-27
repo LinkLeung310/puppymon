@@ -324,6 +324,10 @@ h3 {
   display: none;
 }
 
+.scan-overlay.scan-overlay-fail {
+  background: rgba(239, 101, 84, 0.34);
+}
+
 .scan-pulse {
   width: 108px;
   height: 108px;
@@ -374,6 +378,11 @@ h3 {
 
 .result-burst.show {
   animation: popCatch 1.05s cubic-bezier(.2, 1.4, .32, 1) forwards;
+}
+
+.result-burst.fail .burst-card {
+  background: var(--coral);
+  color: #fff;
 }
 
 .burst-card {
@@ -486,7 +495,7 @@ h3 {
 
 .camera-actions {
   justify-content: center;
-  gap: 18px;
+  gap: 22px;
   padding: 4px 0 2px;
 }
 
@@ -544,6 +553,10 @@ h3 {
   padding: 12px;
   background: #fff;
   font-weight: 800;
+}
+
+.shake {
+  animation: viewportShake 0.36s ease-in-out 2;
 }
 
 .dot {
@@ -907,6 +920,14 @@ h3 {
   0% { transform: scale(0.94); }
   50% { transform: scale(1); }
   100% { transform: scale(0.94); }
+}
+
+@keyframes viewportShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(7px); }
+  60% { transform: translateX(-6px); }
+  80% { transform: translateX(5px); }
 }
 
 @media (max-width: 880px) {
