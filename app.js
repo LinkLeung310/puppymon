@@ -78,7 +78,7 @@ function escapeHtml(text) {
 }
 
 function joinBits(values) {
-  return values.join(" • ");
+  return values.join(" - ");
 }
 
 function formatCapturedAt(iso) {
@@ -311,7 +311,7 @@ function renderStats() {
     breeds[dog.speciesGuess] = (breeds[dog.speciesGuess] || 0) + 1;
   });
   const topBreed = Object.entries(breeds).sort((a, b) => b[1] - a[1])[0];
-  rarityMix.textContent = topBreed ? `${collection.length} total • ${topBreed[0]}` : "fresh run";
+  rarityMix.textContent = topBreed ? `${collection.length} total - ${topBreed[0]}` : "fresh run";
   statList.innerHTML = rarities.map((rarity) => {
     const value = counts[rarity.label];
     const pct = collection.length ? Math.max(8, Math.round((value / collection.length) * 100)) : 0;
@@ -366,7 +366,7 @@ function openProfileSheet(dog) {
   profileRarity.textContent = `Rarity: ${dog.rarity}`;
   profileLocation.textContent = `Spot: ${dog.location?.label || "location unavailable"}`;
   profileTime.textContent = `Seen: ${formatCapturedAt(dog.capturedAt)}`;
-  profileTraits.textContent = `Traits: ${joinBits(dog.traits)} • ${Math.round(dog.detectionScore * 100)}% dog match`;
+  profileTraits.textContent = `Traits: ${joinBits(dog.traits)} - ${Math.round(dog.detectionScore * 100)}% dog match`;
   profileBadges.innerHTML = buildCatchBadges(dog).map((badge) => `<span>${escapeHtml(badge)}</span>`).join("");
   profileMetaList.innerHTML = [
     { label: "Encounter type", value: dog.encounterType || classifyEncounter(dog.detectionScore) },
