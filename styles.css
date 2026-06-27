@@ -644,6 +644,10 @@ h3 {
   line-height: 1.35;
 }
 
+.sheet-card h2 {
+  max-width: 12ch;
+}
+
 .sheet-card {
   width: min(100%, 420px);
   padding: 16px;

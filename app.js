@@ -52,7 +52,6 @@ let detectorModel = null;
 let breedModel = null;
 let currentCoords = null;
 let pendingCatch = null;
-let latestDetection = null;
 let collection = JSON.parse(localStorage.getItem("puppymon.collection") || "[]");
 
 function save() {
@@ -81,7 +80,7 @@ function clearDetectionBox() {
 
 function drawDetectionBox(detection) {
   clearDetectionBox();
-  if (!detection) return;
+  if (!detection || !snapshot.width || !snapshot.height) return;
   const [x, y, width, height] = detection.bbox;
   const box = document.createElement("div");
   box.className = "detection-box";
@@ -104,7 +103,12 @@ function pickRarity(score) {
 }
 
 function traitsFromPixels(sample) {
-  const tone = sample.avgR > sample.avgB + 18 ? "warm coat" : sample.avgB > sample.avgR + 18 ? "cool-toned coat" : "balanced coat";
+  const tone =
+    sample.avgR > sample.avgB + 18
+      ? "warm coat"
+      : sample.avgB > sample.avgR + 18
+        ? "cool-toned coat"
+        : "balanced coat";
   const brightness = sample.avgL > 165 ? "light fur" : sample.avgL < 105 ? "dark fur" : "mid-tone fur";
   const size = sample.coverage > 0.35 ? "big frame" : sample.coverage < 0.18 ? "small frame" : "medium build";
   return [tone, brightness, size];
@@ -176,6 +180,7 @@ function renderCards() {
       `Traits: ${dog.traits.join(" • ")}`,
       dog.location?.label || "location unavailable",
       formatCapturedAt(dog.capturedAt),
+      `${Math.round(dog.detectionScore * 100)}% dog match`,
     ];
     node.querySelector(".profile-line").innerHTML = `<strong>Seen at</strong> ${profileBits.join(" • ")}`;
     node.querySelector(".bars").innerHTML = stats.map((key) => `
@@ -199,10 +204,7 @@ function renderCards() {
 
 function projectMarker(location, center) {
   if (!location?.coords || !center) {
-    return {
-      left: 50,
-      top: 50,
-    };
+    return { left: 50, top: 50 };
   }
   const latScale = 0.015;
   const lngScale = 0.02;
@@ -270,7 +272,7 @@ function openProfileSheet(dog) {
   profileRarity.textContent = `Rarity: ${dog.rarity}`;
   profileLocation.textContent = `Spot: ${dog.location?.label || "location unavailable"}`;
   profileTime.textContent = `Seen: ${formatCapturedAt(dog.capturedAt)}`;
-  profileTraits.textContent = `Traits: ${dog.traits.join(" • ")}`;
+  profileTraits.textContent = `Traits: ${dog.traits.join(" • ")} • ${Math.round(dog.detectionScore * 100)}% dog match`;
   profileStats.innerHTML = stats.map((key) => `
     <div class="bar">
       <span>${key}</span>
@@ -308,7 +310,10 @@ async function readLocation() {
         const lng = position.coords.longitude.toFixed(4);
         resolve({
           label: `${lat}, ${lng}`,
-          coords: { latitude: position.coords.latitude, longitude: position.coords.longitude },
+          coords: {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          },
         });
       },
       () => resolve({ label: "location unavailable", coords: null }),
@@ -325,7 +330,10 @@ async function openCamera() {
       photoInput.click();
       return;
     }
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment" },
+      audio: false,
+    });
     camera.srcObject = stream;
     await camera.play();
     viewport.classList.add("has-camera");
@@ -372,14 +380,19 @@ async function detectDogFromSnapshot() {
     .filter((item) => item.class === "dog" && item.score >= 0.55)
     .sort((a, b) => b.score - a.score);
   if (dogDetections.length === 0) return null;
+
   const best = dogDetections[0];
   const breedPredictions = await breedModel.classify(snapshot, 5);
-  const likelyDogLabel = breedPredictions.find((item) => /dog|terrier|retriever|shepherd|husky|poodle|beagle|bulldog|spaniel|corgi|dachshund|akita|shiba|collie|mastiff|chihuahua|boxer|pug/i.test(item.className));
+  const likelyDogLabel = breedPredictions.find((item) =>
+    /dog|terrier|retriever|shepherd|husky|poodle|beagle|bulldog|spaniel|corgi|dachshund|akita|shiba|collie|mastiff|chihuahua|boxer|pug/i.test(
+      item.className,
+    ),
+  );
   const ctx = snapshot.getContext("2d");
   const sample = extractColorProfile(ctx, best.bbox);
   const traits = traitsFromPixels(sample);
-  latestDetection = best;
   drawDetectionBox(best);
+
   return {
     detection: best,
     speciesGuess: likelyDogLabel ? likelyDogLabel.className : "mixed-breed dog",
@@ -404,7 +417,7 @@ function closeNamingSheet() {
   namingSheet.classList.add("hidden");
 }
 
-async function runCatch(isDemo = false) {
+async function runCatch() {
   snapBtn.disabled = true;
   captureFrame();
   updateStatus("Scanning this photo for a real dog...", "scanning");
@@ -415,6 +428,7 @@ async function runCatch(isDemo = false) {
     snapBtn.disabled = false;
     return;
   }
+
   const location = await readLocation();
   const profile = createDogProfile({
     ...details,
@@ -424,7 +438,10 @@ async function runCatch(isDemo = false) {
   resultBurst.classList.remove("show");
   void resultBurst.offsetWidth;
   resultBurst.classList.add("show");
-  updateStatus(`Dog found. Name your new Puppymon to save it.`, `dog ${Math.round(profile.detectionScore * 100)}%`);
+  updateStatus(
+    "Dog found. Name your new Puppymon to save it.",
+    `dog ${Math.round(profile.detectionScore * 100)}%`,
+  );
   openNamingSheet(profile);
   snapBtn.disabled = false;
 }
@@ -442,7 +459,7 @@ cameraBtn.addEventListener("click", openCamera);
 snapBtn.addEventListener("click", async () => {
   await ensureModels();
   if (stream && camera.videoWidth) {
-    runCatch(false);
+    runCatch();
     return;
   }
   updateStatus("Opening the phone camera for a fresh catch.", "camera picker");
@@ -452,13 +469,14 @@ galleryBtn.addEventListener("click", () => {
   updateStatus("Opening photo roll. A real dog still needs to be detected to save.", "photo roll");
   photoInput.click();
 });
+
 photoInput.addEventListener("change", async () => {
   const file = photoInput.files?.[0];
   if (!file) return;
   try {
     updateStatus("Photo received. Checking for a dog...", "photo loaded");
     await loadPhoto(file);
-    await runCatch(false);
+    await runCatch();
   } catch {
     updateStatus("Could not read that photo. Try another snap.", "photo error");
   } finally {
@@ -486,6 +504,7 @@ closeProfileBtn.addEventListener("click", closeProfileSheet);
 resetBtn.addEventListener("click", () => {
   collection = [];
   save();
+  clearDetectionBox();
   updateStatus("Puppydex cleared. Fresh walk, fresh finds.", "reset");
   renderAll();
 });
