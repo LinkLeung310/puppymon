@@ -577,6 +577,7 @@ h3 {
   border-radius: 999px 999px 999px 6px;
   background: var(--pin, var(--coral));
   transform: translate(-50%, -50%) rotate(-45deg);
+  cursor: pointer;
 }
 
 .pin span {

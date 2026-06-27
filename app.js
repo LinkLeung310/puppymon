@@ -141,6 +141,19 @@ function extractColorProfile(ctx, box) {
   };
 }
 
+function cropDogImage(box) {
+  const sx = Math.max(0, Math.floor(box[0]));
+  const sy = Math.max(0, Math.floor(box[1]));
+  const sw = Math.max(1, Math.floor(box[2]));
+  const sh = Math.max(1, Math.floor(box[3]));
+  const cropCanvas = document.createElement("canvas");
+  cropCanvas.width = sw;
+  cropCanvas.height = sh;
+  const cropCtx = cropCanvas.getContext("2d");
+  cropCtx.drawImage(snapshot, sx, sy, sw, sh, 0, 0, sw, sh);
+  return cropCanvas;
+}
+
 function createDogProfile(details) {
   const rarity = pickRarity(details.detection.score);
   const level = Math.floor(1 + details.detection.score * 20 + rarities.indexOf(rarity) * 4);
@@ -157,6 +170,7 @@ function createDogProfile(details) {
     detectionScore: details.detection.score,
     capturedAt: new Date().toISOString(),
     photo: details.photo,
+    cropPhoto: details.cropPhoto,
     location: details.location,
     stats: {
       zoom: Math.min(99, 40 + (statsSeed % 50)),
@@ -171,7 +185,7 @@ function renderCards() {
   collection.forEach((dog) => {
     const node = cardTemplate.content.firstElementChild.cloneNode(true);
     node.style.setProperty("--card-bg", dog.color);
-    node.querySelector(".card-photo").src = dog.photo;
+    node.querySelector(".card-photo").src = dog.cropPhoto || dog.photo;
     node.querySelector(".rarity").textContent = dog.rarity;
     node.querySelector("h3").textContent = dog.name;
     node.querySelector(".breed-line").textContent = dog.speciesGuess;
@@ -233,6 +247,7 @@ function renderMap() {
     pin.style.setProperty("--pin", dog.color);
     pin.title = `${dog.name} - ${dog.location?.label || "saved spot"}`;
     pin.innerHTML = `<span>${dog.name.slice(0, 1)}</span>`;
+    pin.addEventListener("click", () => openProfileSheet(dog));
     mapBoard.appendChild(pin);
   });
 }
@@ -382,7 +397,8 @@ async function detectDogFromSnapshot() {
   if (dogDetections.length === 0) return null;
 
   const best = dogDetections[0];
-  const breedPredictions = await breedModel.classify(snapshot, 5);
+  const cropCanvas = cropDogImage(best.bbox);
+  const breedPredictions = await breedModel.classify(cropCanvas, 5);
   const likelyDogLabel = breedPredictions.find((item) =>
     /dog|terrier|retriever|shepherd|husky|poodle|beagle|bulldog|spaniel|corgi|dachshund|akita|shiba|collie|mastiff|chihuahua|boxer|pug/i.test(
       item.className,
@@ -398,6 +414,7 @@ async function detectDogFromSnapshot() {
     speciesGuess: likelyDogLabel ? likelyDogLabel.className : "mixed-breed dog",
     traits,
     photo: snapshot.toDataURL("image/jpeg", 0.92),
+    cropPhoto: cropCanvas.toDataURL("image/jpeg", 0.92),
   };
 }
 
