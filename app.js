@@ -5,15 +5,16 @@ const viewport = document.querySelector("#viewport");
 const cameraBtn = document.querySelector("#cameraBtn");
 const snapBtn = document.querySelector("#snapBtn");
 const galleryBtn = document.querySelector("#galleryBtn");
+const langToggle = document.querySelector("#langToggle");
 const statusText = document.querySelector("#statusText");
 const detectionChip = document.querySelector("#detectionChip");
 const caughtCount = document.querySelector("#caughtCount");
 const cardGrid = document.querySelector("#cardGrid");
 const cardTemplate = document.querySelector("#cardTemplate");
 const resultBurst = document.querySelector("#resultBurst");
+const resultLabel = document.querySelector("#resultLabel");
 const resultName = document.querySelector("#resultName");
 const mapBoard = document.querySelector("#mapBoard");
-const mapCenter = document.querySelector("#mapCenter");
 const statList = document.querySelector("#statList");
 const rarityMix = document.querySelector("#rarityMix");
 const mapMode = document.querySelector("#mapMode");
@@ -45,6 +46,9 @@ const intelHint = document.querySelector("#intelHint");
 const intelTraits = document.querySelector("#intelTraits");
 const intelLocation = document.querySelector("#intelLocation");
 const intelConfidence = document.querySelector("#intelConfidence");
+const scanOverlay = document.querySelector("#scanOverlay");
+const scanTitle = document.querySelector("#scanTitle");
+const scanMessage = document.querySelector("#scanMessage");
 
 const names = ["Biscuit", "Rocket", "Miso", "Pixel", "Noodle", "Scout", "Maple", "Ziggy", "Pepper", "Tango"];
 const rarities = [
@@ -55,16 +59,248 @@ const rarities = [
 ];
 const stats = ["zoom", "charm", "sniff"];
 
+const copy = {
+  en: {
+    brand_kicker: "Puppymon",
+    brand_title: "Puppydex",
+    subcopy: "Catch real dogs, keep the photo, save the spot, build a living local dex.",
+    caught_label: "caught",
+    chip_loading: "Model loading...",
+    result_detected: "Dog detected",
+    mobile_callout: "Best on phone: tap capture, let us detect the dog, then give your new Puppymon a name.",
+    status_loading: "Loading dog detector...",
+    catch_intel: "Catch Intel",
+    latest_scan: "Latest scan",
+    field_notes: "Field notes",
+    active_zone: "Active zone",
+    tab_profiles: "Profiles",
+    tab_map: "Map",
+    tab_dex: "Dex",
+    collected_dogs: "Collected Dogs",
+    reset: "Reset",
+    catch_map: "Catch Map",
+    puppydex: "Puppydex",
+    name_your_puppymon: "Name your Puppymon",
+    name_label: "Name",
+    cancel: "Cancel",
+    save_catch: "Save catch",
+    collected_profile: "Collected profile",
+    back_to_dex: "Back to dex",
+    scan_title: "Scanning for a real dog",
+    scan_message: "Running live dog detection and breed guess...",
+    scan_message_location: "Checking the dog, traits, and current location...",
+    camera_picker: "camera picker",
+    loading_detector_badge: "loading detector",
+    detector_ready_badge: "detector ready",
+    live_camera_badge: "live camera",
+    scanning_badge: "scanning",
+    no_dog_badge: "no dog found",
+    photo_roll_badge: "photo roll",
+    photo_loaded_badge: "photo loaded",
+    photo_error_badge: "photo error",
+    saved_badge: "saved",
+    canceled_badge: "canceled",
+    reset_badge: "reset",
+    model_error_badge: "model error",
+    camera_ready: "Camera ready. Keep the dog in frame and tap capture.",
+    camera_opening: "Opening the phone camera for a fresh catch.",
+    live_camera_unavailable: "Live camera unavailable. Opening phone camera instead.",
+    phone_camera_opening: "Phone camera opening for a fresh catch.",
+    opening_photo_roll: "Opening photo roll. A real dog still needs to be detected to save.",
+    photo_received: "Photo received. Checking for a dog...",
+    photo_error: "Could not read that photo. Try another snap.",
+    detector_ready: "Detector ready. Snap a real dog to collect it.",
+    model_error: "Model load failed. Camera can still open, but detection is unavailable.",
+    scanning_status: "Scanning this photo for a real dog...",
+    no_dog: "No dog detected in that shot. Try a clearer dog photo.",
+    dog_found: "Dog found. Name your new Puppymon to save it.",
+    catch_canceled: "Catch canceled. Nothing was added.",
+    dex_reset: "Puppydex cleared. Fresh walk, fresh finds.",
+    joined_dex: "{name} joined your Puppydex.",
+    waiting_for_dog: "Waiting for a dog",
+    no_traits: "No traits yet",
+    location_pending: "Location pending",
+    detector_confidence_here: "Detector confidence will appear here.",
+    open_camera: "Open camera",
+    use_photo: "Use photo",
+    snap_dog: "Snap dog",
+    world_map: "world map",
+    world_map_ready: "World map",
+    pins_after_capture: "Location markers appear after capture.",
+    live_map_note: "Pins are placed on the real map using the coordinates saved for each dog.",
+    no_location_map_note: "Location permission is off or unavailable, so the world map centers on a default view.",
+    you_marker: "You are here",
+    breed_label: "Breed",
+    traits_label: "Traits",
+    spot_label: "Spot",
+    rarity_label: "Rarity",
+    seen_label: "Seen",
+    encounter_type: "Encounter type",
+    stored_frame: "Stored frame",
+    nearest_spot: "Nearest spot",
+    full_shot_crop: "full shot + dog crop",
+    full_shot_only: "full shot only",
+    location_unavailable: "location unavailable",
+    unknown_time: "unknown time",
+    streak_suffix: "streak",
+    total_label: "total",
+    fresh_run: "fresh run",
+    latest_saved_hint: "{count} dogs logged. Open the camera to add the next local find.",
+    unlock_hint: "Point the camera at a real dog to unlock a new Puppymon profile.",
+    latest_saved_confidence: "{score}% dog match from the latest saved catch.",
+    latest_scan_hint: "Latest scan reads as a {encounter}. Name it to save the entry.",
+    dog_match: "{score}% dog match",
+    seen_at: "Seen at",
+    level_label: "LV {level}",
+    mixed_breed_dog: "mixed-breed dog",
+    warm_coat: "warm coat",
+    cool_toned_coat: "cool-toned coat",
+    balanced_coat: "balanced coat",
+    light_fur: "light fur",
+    dark_fur: "dark fur",
+    mid_tone_fur: "mid-tone fur",
+    big_frame: "big frame",
+    small_frame: "small frame",
+    medium_build: "medium build",
+    alpha_encounter: "alpha encounter",
+    strong_encounter: "strong encounter",
+    steady_encounter: "steady encounter",
+    wild_encounter: "wild encounter",
+  },
+  zh: {
+    brand_kicker: "Puppymon",
+    brand_title: "狗狗图鉴",
+    subcopy: "拍到真实狗狗，保存照片和地点，慢慢收集你身边的活体图鉴。",
+    caught_label: "已收集",
+    chip_loading: "模型加载中...",
+    result_detected: "检测到狗狗",
+    mobile_callout: "最适合手机使用：点击拍摄，让我们先识别狗狗，再给新的 Puppymon 命名。",
+    status_loading: "正在加载狗狗检测器...",
+    catch_intel: "捕捉情报",
+    latest_scan: "最近扫描",
+    field_notes: "现场特征",
+    active_zone: "当前区域",
+    tab_profiles: "档案",
+    tab_map: "地图",
+    tab_dex: "图鉴",
+    collected_dogs: "已收集狗狗",
+    reset: "重置",
+    catch_map: "捕捉地图",
+    puppydex: "狗狗图鉴",
+    name_your_puppymon: "给你的 Puppymon 命名",
+    name_label: "名字",
+    cancel: "取消",
+    save_catch: "保存收集",
+    collected_profile: "已收集档案",
+    back_to_dex: "返回图鉴",
+    scan_title: "正在扫描真实狗狗",
+    scan_message: "正在运行实时狗狗检测和种类猜测...",
+    scan_message_location: "正在检查狗狗、特征和当前位置...",
+    camera_picker: "打开相机",
+    loading_detector_badge: "模型加载中",
+    detector_ready_badge: "识别器就绪",
+    live_camera_badge: "实时相机",
+    scanning_badge: "扫描中",
+    no_dog_badge: "未检测到狗",
+    photo_roll_badge: "相册",
+    photo_loaded_badge: "照片已载入",
+    photo_error_badge: "照片错误",
+    saved_badge: "已保存",
+    canceled_badge: "已取消",
+    reset_badge: "已重置",
+    model_error_badge: "模型错误",
+    camera_ready: "相机已就绪，把狗狗放进取景框后点击拍摄。",
+    camera_opening: "正在打开手机相机进行新的捕捉。",
+    live_camera_unavailable: "无法使用实时相机，改为打开手机相机。",
+    phone_camera_opening: "正在打开手机相机进行新的捕捉。",
+    opening_photo_roll: "正在打开相册，仍然必须检测到真实狗狗才能保存。",
+    photo_received: "照片已接收，正在检查是否有狗狗...",
+    photo_error: "无法读取这张照片，请换一张再试。",
+    detector_ready: "识别器已就绪。拍摄真实狗狗即可收集。",
+    model_error: "模型加载失败。相机仍可打开，但检测功能暂时不可用。",
+    scanning_status: "正在扫描这张照片里的真实狗狗...",
+    no_dog: "这张照片里没有检测到狗狗，请换一张更清晰的。",
+    dog_found: "找到狗狗了。给新的 Puppymon 命名后再保存。",
+    catch_canceled: "本次捕捉已取消，没有加入图鉴。",
+    dex_reset: "图鉴已清空，重新开始散步收集吧。",
+    joined_dex: "{name} 已加入你的图鉴。",
+    waiting_for_dog: "等待狗狗出现",
+    no_traits: "还没有特征",
+    location_pending: "位置待获取",
+    detector_confidence_here: "这里会显示识别置信度。",
+    open_camera: "打开相机",
+    use_photo: "使用照片",
+    snap_dog: "拍摄狗狗",
+    world_map: "世界地图",
+    world_map_ready: "真实地图",
+    pins_after_capture: "成功收集后会在地图上出现位置标记。",
+    live_map_note: "每只狗狗都会按保存时的经纬度落在真实地图上。",
+    no_location_map_note: "如果没有定位权限，地图会显示默认视角，之后拿到定位再自动更新。",
+    you_marker: "你在这里",
+    breed_label: "种类",
+    traits_label: "特征",
+    spot_label: "地点",
+    rarity_label: "稀有度",
+    seen_label: "时间",
+    encounter_type: "遭遇类型",
+    stored_frame: "保存画面",
+    nearest_spot: "收集位置",
+    full_shot_crop: "原图 + 狗狗裁切",
+    full_shot_only: "只有原图",
+    location_unavailable: "位置不可用",
+    unknown_time: "时间未知",
+    streak_suffix: "连击",
+    total_label: "总计",
+    fresh_run: "刚开始收集",
+    latest_saved_hint: "已记录 {count} 只狗狗，打开相机继续收集下一只。",
+    unlock_hint: "把镜头对准真实狗狗，就能解锁新的 Puppymon 档案。",
+    latest_saved_confidence: "最近一次保存的狗狗匹配度为 {score}%。",
+    latest_scan_hint: "最近一次扫描判定为 {encounter}，命名后即可保存档案。",
+    dog_match: "狗狗匹配度 {score}%",
+    seen_at: "发现于",
+    level_label: "等级 {level}",
+    mixed_breed_dog: "混种狗狗",
+    warm_coat: "暖色毛发",
+    cool_toned_coat: "冷色毛发",
+    balanced_coat: "中性毛色",
+    light_fur: "浅色毛发",
+    dark_fur: "深色毛发",
+    mid_tone_fur: "中等毛色",
+    big_frame: "体型偏大",
+    small_frame: "体型偏小",
+    medium_build: "中等体型",
+    alpha_encounter: "首领遭遇",
+    strong_encounter: "强势遭遇",
+    steady_encounter: "稳定遭遇",
+    wild_encounter: "野外遭遇",
+  },
+};
+
 let stream = null;
 let detectorModel = null;
 let breedModel = null;
+let map = null;
+let tileLayer = null;
+let playerMarker = null;
+let dogMarkers = [];
 let currentCoords = null;
 let pendingCatch = null;
 let lastDetection = null;
+let currentLang = localStorage.getItem("puppymon.lang") || "en";
 let collection = JSON.parse(localStorage.getItem("puppymon.collection") || "[]");
 
 function save() {
   localStorage.setItem("puppymon.collection", JSON.stringify(collection));
+}
+
+function t(key, vars = {}) {
+  const table = copy[currentLang] || copy.en;
+  const fallback = copy.en[key] || key;
+  const template = table[key] || fallback;
+  return Object.entries(vars).reduce(
+    (text, [name, value]) => text.replaceAll(`{${name}}`, String(value)),
+    template,
+  );
 }
 
 function escapeHtml(text) {
@@ -81,15 +317,40 @@ function joinBits(values) {
   return values.join(" - ");
 }
 
+function localizeTraitLabel(label) {
+  const key = label.replaceAll(" ", "_").replaceAll("-", "_");
+  return t(key);
+}
+
+function updateStaticText() {
+  document.documentElement.lang = currentLang === "zh" ? "zh-CN" : "en";
+  document.querySelectorAll("[data-i18n]").forEach((node) => {
+    node.textContent = t(node.dataset.i18n);
+  });
+  langToggle.dataset.lang = currentLang;
+  cameraBtn.title = t("open_camera");
+  cameraBtn.setAttribute("aria-label", t("open_camera"));
+  snapBtn.setAttribute("aria-label", t("snap_dog"));
+  galleryBtn.title = t("use_photo");
+  galleryBtn.setAttribute("aria-label", t("use_photo"));
+  nameInput.placeholder = currentLang === "zh" ? "给它起个名字" : "Mochi";
+}
+
 function formatCapturedAt(iso) {
   const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "unknown time";
-  return date.toLocaleString("en-US", {
+  if (Number.isNaN(date.getTime())) return t("unknown_time");
+  return date.toLocaleString(currentLang === "zh" ? "zh-CN" : "en-US", {
     month: "short",
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function setScanState(active, messageKey = "scan_message") {
+  scanOverlay.classList.toggle("hidden", !active);
+  scanTitle.textContent = t("scan_title");
+  scanMessage.textContent = t(messageKey);
 }
 
 function updateStatus(text, badge = null) {
@@ -98,17 +359,17 @@ function updateStatus(text, badge = null) {
 }
 
 function classifyEncounter(score) {
-  if (score >= 0.9) return "alpha encounter";
-  if (score >= 0.8) return "strong encounter";
-  if (score >= 0.68) return "steady encounter";
-  return "wild encounter";
+  if (score >= 0.9) return t("alpha_encounter");
+  if (score >= 0.8) return t("strong_encounter");
+  if (score >= 0.68) return t("steady_encounter");
+  return t("wild_encounter");
 }
 
 function buildCatchBadges(dog) {
   return [
     dog.rarity,
-    `LV ${dog.level}`,
-    `${Math.round(dog.detectionScore * 100)}% match`,
+    t("level_label", { level: dog.level }),
+    `${Math.round(dog.detectionScore * 100)}%`,
     dog.encounterType || classifyEncounter(dog.detectionScore),
   ];
 }
@@ -139,7 +400,7 @@ function drawDetectionBox(detection) {
   box.style.top = `${(y / snapshot.height) * 100}%`;
   box.style.width = `${(width / snapshot.width) * 100}%`;
   box.style.height = `${(height / snapshot.height) * 100}%`;
-  box.innerHTML = `<span>Dog ${Math.round(detection.score * 100)}%</span>`;
+  box.innerHTML = `<span>${t("result_detected")} ${Math.round(detection.score * 100)}%</span>`;
   viewport.appendChild(box);
 }
 
@@ -156,12 +417,12 @@ function pickRarity(score) {
 function traitsFromPixels(sample) {
   const tone =
     sample.avgR > sample.avgB + 18
-      ? "warm coat"
+      ? t("warm_coat")
       : sample.avgB > sample.avgR + 18
-        ? "cool-toned coat"
-        : "balanced coat";
-  const brightness = sample.avgL > 165 ? "light fur" : sample.avgL < 105 ? "dark fur" : "mid-tone fur";
-  const size = sample.coverage > 0.35 ? "big frame" : sample.coverage < 0.18 ? "small frame" : "medium build";
+        ? t("cool_toned_coat")
+        : t("balanced_coat");
+  const brightness = sample.avgL > 165 ? t("light_fur") : sample.avgL < 105 ? t("dark_fur") : t("mid_tone_fur");
+  const size = sample.coverage > 0.35 ? t("big_frame") : sample.coverage < 0.18 ? t("small_frame") : t("medium_build");
   return [tone, brightness, size];
 }
 
@@ -242,14 +503,14 @@ function renderCards() {
     node.querySelector(".rarity").textContent = dog.rarity;
     node.querySelector("h3").textContent = dog.name;
     node.querySelector(".breed-line").textContent = dog.speciesGuess;
-    node.querySelector(".level").textContent = `LV ${dog.level}`;
+    node.querySelector(".level").textContent = t("level_label", { level: dog.level });
     const profileBits = [
-      `Traits: ${joinBits(dog.traits)}`,
-      dog.location?.label || "location unavailable",
+      `${t("traits_label")}: ${joinBits(dog.traits)}`,
+      dog.location?.label || t("location_unavailable"),
       formatCapturedAt(dog.capturedAt),
-      `${Math.round(dog.detectionScore * 100)}% dog match`,
+      t("dog_match", { score: Math.round(dog.detectionScore * 100) }),
     ];
-    node.querySelector(".profile-line").innerHTML = `<strong>Seen at</strong> ${escapeHtml(joinBits(profileBits))}`;
+    node.querySelector(".profile-line").innerHTML = `<strong>${t("seen_at")}</strong> ${escapeHtml(joinBits(profileBits))}`;
     node.querySelector(".bars").innerHTML = stats.map((key) => `
       <div class="bar">
         <span>${key}</span>
@@ -269,37 +530,63 @@ function renderCards() {
   caughtCount.textContent = collection.length;
 }
 
-function projectMarker(location, center) {
-  if (!location?.coords || !center) return { left: 50, top: 50 };
-  const latScale = 0.015;
-  const lngScale = 0.02;
-  const dx = ((location.coords.longitude - center.longitude) / lngScale) * 50;
-  const dy = ((location.coords.latitude - center.latitude) / latScale) * -50;
-  return {
-    left: Math.min(92, Math.max(8, 50 + dx)),
-    top: Math.min(92, Math.max(8, 50 + dy)),
-  };
+function ensureMap() {
+  if (map || typeof L === "undefined") return;
+  map = L.map(mapBoard, { zoomControl: false, attributionControl: true }).setView([34.0522, -118.2437], 12);
+  tileLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19,
+    attribution: "&copy; OpenStreetMap contributors",
+  });
+  tileLayer.addTo(map);
+  setTimeout(() => map.invalidateSize(), 60);
+}
+
+function makeDivIcon(className, color) {
+  return L.divIcon({
+    className: "",
+    html: `<div class="${className}" style="--pin:${color || "#ef6554"}"></div>`,
+    iconSize: className === "player-pin" ? [22, 22] : [18, 18],
+    iconAnchor: className === "player-pin" ? [11, 11] : [9, 9],
+  });
+}
+
+function clearMapMarkers() {
+  dogMarkers.forEach((marker) => marker.remove());
+  dogMarkers = [];
+  if (playerMarker) {
+    playerMarker.remove();
+    playerMarker = null;
+  }
 }
 
 function renderMap() {
-  mapBoard.querySelectorAll(".pin").forEach((pin) => pin.remove());
-  const center = currentCoords;
-  mapMode.textContent = center ? "geo tagged" : "relative grid";
-  mapCenter.textContent = center ? "YOU" : "GRID";
-  mapNote.textContent = center
-    ? "Pins are placed from the coordinates saved when each dog was collected."
-    : "Location permission is off or unavailable, so pins fall back to a relative grid.";
+  ensureMap();
+  clearMapMarkers();
+  if (!map) return;
+
+  const coords = currentCoords;
+  mapMode.textContent = t("world_map_ready");
+  mapNote.textContent = coords ? t("live_map_note") : t("no_location_map_note");
+
+  if (coords) {
+    map.setView([coords.latitude, coords.longitude], 15);
+    playerMarker = L.marker([coords.latitude, coords.longitude], {
+      icon: makeDivIcon("player-pin", "#f7d84a"),
+      title: t("you_marker"),
+    }).addTo(map);
+  } else if (collection[0]?.location?.coords) {
+    map.setView([collection[0].location.coords.latitude, collection[0].location.coords.longitude], 12);
+  }
+
   collection.forEach((dog) => {
-    const position = projectMarker(dog.location, center);
-    const pin = document.createElement("div");
-    pin.className = "pin";
-    pin.style.left = `${position.left}%`;
-    pin.style.top = `${position.top}%`;
-    pin.style.setProperty("--pin", dog.color);
-    pin.title = `${dog.name} - ${dog.location?.label || "saved spot"}`;
-    pin.innerHTML = `<span>${dog.name.slice(0, 1)}</span>`;
-    pin.addEventListener("click", () => openProfileSheet(dog));
-    mapBoard.appendChild(pin);
+    if (!dog.location?.coords) return;
+    const marker = L.marker([dog.location.coords.latitude, dog.location.coords.longitude], {
+      icon: makeDivIcon("dog-pin", dog.color),
+      title: dog.name,
+    }).addTo(map);
+    marker.on("click", () => openProfileSheet(dog));
+    marker.bindPopup(`<strong>${escapeHtml(dog.name)}</strong><br>${escapeHtml(dog.speciesGuess)}`);
+    dogMarkers.push(marker);
   });
 }
 
@@ -311,7 +598,7 @@ function renderStats() {
     breeds[dog.speciesGuess] = (breeds[dog.speciesGuess] || 0) + 1;
   });
   const topBreed = Object.entries(breeds).sort((a, b) => b[1] - a[1])[0];
-  rarityMix.textContent = topBreed ? `${collection.length} total - ${topBreed[0]}` : "fresh run";
+  rarityMix.textContent = topBreed ? `${collection.length} ${t("total_label")} - ${topBreed[0]}` : t("fresh_run");
   statList.innerHTML = rarities.map((rarity) => {
     const value = counts[rarity.label];
     const pct = collection.length ? Math.max(8, Math.round((value / collection.length) * 100)) : 0;
@@ -326,33 +613,34 @@ function renderStats() {
 }
 
 function renderIntel() {
-  streakBadge.textContent = `${getCatchStreak()} streak`;
+  streakBadge.textContent = `${getCatchStreak()} ${t("streak_suffix")}`;
   if (!lastDetection) {
     const latestSaved = collection[collection.length - 1];
-    intelSpecies.textContent = latestSaved?.speciesGuess || "Waiting for a dog";
+    intelSpecies.textContent = latestSaved?.speciesGuess || t("waiting_for_dog");
     intelHint.textContent = latestSaved
-      ? `${collection.length} dogs logged. Open the camera to add the next local find.`
-      : "Point the camera at a real dog to unlock a new Puppymon profile.";
+      ? t("latest_saved_hint", { count: collection.length })
+      : t("unlock_hint");
     intelTraits.innerHTML = latestSaved
       ? latestSaved.traits.map((trait) => `<span>${escapeHtml(trait)}</span>`).join("")
-      : "<span>No traits yet</span>";
+      : `<span>${escapeHtml(t("no_traits"))}</span>`;
     intelLocation.textContent = currentCoords
       ? `${currentCoords.latitude.toFixed(4)}, ${currentCoords.longitude.toFixed(4)}`
-      : latestSaved?.location?.label || "Location pending";
+      : latestSaved?.location?.label || t("location_pending");
     intelConfidence.textContent = latestSaved
-      ? `${Math.round(latestSaved.detectionScore * 100)}% dog match from the latest saved catch.`
-      : "Detector confidence will appear here.";
+      ? t("latest_saved_confidence", { score: Math.round(latestSaved.detectionScore * 100) })
+      : t("detector_confidence_here");
     return;
   }
 
   intelSpecies.textContent = lastDetection.speciesGuess;
-  intelHint.textContent = `Latest scan reads as a ${classifyEncounter(lastDetection.detection.score)}. Name it to save the entry.`;
+  intelHint.textContent = t("latest_scan_hint", { encounter: classifyEncounter(lastDetection.detection.score) });
   intelTraits.innerHTML = lastDetection.traits.map((trait) => `<span>${escapeHtml(trait)}</span>`).join("");
-  intelLocation.textContent = lastDetection.location?.label || "Location unavailable";
-  intelConfidence.textContent = `${Math.round(lastDetection.detection.score * 100)}% dog match`;
+  intelLocation.textContent = lastDetection.location?.label || t("location_unavailable");
+  intelConfidence.textContent = t("dog_match", { score: Math.round(lastDetection.detection.score * 100) });
 }
 
 function renderAll() {
+  updateStaticText();
   renderCards();
   renderMap();
   renderStats();
@@ -362,16 +650,16 @@ function renderAll() {
 function openProfileSheet(dog) {
   profileName.textContent = dog.name;
   profilePhoto.src = dog.photo;
-  profileBreed.textContent = `Breed: ${dog.speciesGuess}`;
-  profileRarity.textContent = `Rarity: ${dog.rarity}`;
-  profileLocation.textContent = `Spot: ${dog.location?.label || "location unavailable"}`;
-  profileTime.textContent = `Seen: ${formatCapturedAt(dog.capturedAt)}`;
-  profileTraits.textContent = `Traits: ${joinBits(dog.traits)} - ${Math.round(dog.detectionScore * 100)}% dog match`;
+  profileBreed.textContent = `${t("breed_label")}: ${dog.speciesGuess}`;
+  profileRarity.textContent = `${t("rarity_label")}: ${dog.rarity}`;
+  profileLocation.textContent = `${t("spot_label")}: ${dog.location?.label || t("location_unavailable")}`;
+  profileTime.textContent = `${t("seen_label")}: ${formatCapturedAt(dog.capturedAt)}`;
+  profileTraits.textContent = `${t("traits_label")}: ${joinBits(dog.traits)} - ${t("dog_match", { score: Math.round(dog.detectionScore * 100) })}`;
   profileBadges.innerHTML = buildCatchBadges(dog).map((badge) => `<span>${escapeHtml(badge)}</span>`).join("");
   profileMetaList.innerHTML = [
-    { label: "Encounter type", value: dog.encounterType || classifyEncounter(dog.detectionScore) },
-    { label: "Stored frame", value: dog.cropPhoto ? "full shot + dog crop" : "full shot only" },
-    { label: "Nearest spot", value: dog.location?.label || "location unavailable" },
+    { label: t("encounter_type"), value: dog.encounterType || classifyEncounter(dog.detectionScore) },
+    { label: t("stored_frame"), value: dog.cropPhoto ? t("full_shot_crop") : t("full_shot_only") },
+    { label: t("nearest_spot"), value: dog.location?.label || t("location_unavailable") },
   ].map((item) => `
     <div class="profile-meta-item">
       <span class="profile-meta-label">${escapeHtml(item.label)}</span>
@@ -394,15 +682,15 @@ function closeProfileSheet() {
 
 async function ensureModels() {
   if (detectorModel && breedModel) return;
-  updateStatus("Loading dog detector...", "loading detector");
+  updateStatus(t("status_loading"), t("loading_detector_badge"));
   detectorModel = await cocoSsd.load({ base: "lite_mobilenet_v2" });
   breedModel = await mobilenet.load();
-  updateStatus("Detector ready. Snap a real dog to collect it.", "detector ready");
+  updateStatus(t("detector_ready"), t("detector_ready_badge"));
 }
 
 async function readLocation() {
   if (!navigator.geolocation) {
-    return { label: "location unavailable", coords: null };
+    return { label: t("location_unavailable"), coords: null };
   }
   return new Promise((resolve) => {
     navigator.geolocation.getCurrentPosition(
@@ -421,8 +709,8 @@ async function readLocation() {
           },
         });
       },
-      () => resolve({ label: "location unavailable", coords: null }),
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 60000 },
+      () => resolve({ label: t("location_unavailable"), coords: null }),
+      { enableHighAccuracy: true, timeout: 6000, maximumAge: 60000 },
     );
   });
 }
@@ -431,7 +719,7 @@ async function openCamera() {
   try {
     await ensureModels();
     if (!navigator.mediaDevices?.getUserMedia) {
-      updateStatus("Phone camera opening for a fresh catch.", "camera picker");
+      updateStatus(t("phone_camera_opening"), t("camera_picker"));
       photoInput.click();
       return;
     }
@@ -442,9 +730,9 @@ async function openCamera() {
     camera.srcObject = stream;
     await camera.play();
     viewport.classList.add("has-camera");
-    updateStatus("Camera ready. Keep the dog in frame and tap capture.", "live camera");
+    updateStatus(t("camera_ready"), t("live_camera_badge"));
   } catch {
-    updateStatus("Live camera unavailable. Opening phone camera instead.", "camera picker");
+    updateStatus(t("live_camera_unavailable"), t("camera_picker"));
     photoInput.click();
   }
 }
@@ -501,7 +789,7 @@ async function detectDogFromSnapshot() {
 
   return {
     detection: best,
-    speciesGuess: likelyDogLabel ? likelyDogLabel.className : "mixed-breed dog",
+    speciesGuess: likelyDogLabel ? likelyDogLabel.className : t("mixed_breed_dog"),
     traits,
     photo: snapshot.toDataURL("image/jpeg", 0.92),
     cropPhoto: cropCanvas.toDataURL("image/jpeg", 0.92),
@@ -511,9 +799,9 @@ async function detectDogFromSnapshot() {
 function openNamingSheet(profile) {
   pendingCatch = profile;
   sheetPhoto.src = profile.photo;
-  sheetBreed.textContent = `Breed: ${profile.speciesGuess}`;
-  sheetTraits.textContent = `Traits: ${joinBits(profile.traits)}`;
-  sheetLocation.textContent = `Spot: ${profile.location?.label || "location unavailable"}`;
+  sheetBreed.textContent = `${t("breed_label")}: ${profile.speciesGuess}`;
+  sheetTraits.textContent = `${t("traits_label")}: ${joinBits(profile.traits)}`;
+  sheetLocation.textContent = `${t("spot_label")}: ${profile.location?.label || t("location_unavailable")}`;
   nameInput.value = profile.name;
   namingSheet.classList.remove("hidden");
   setTimeout(() => nameInput.focus(), 30);
@@ -527,37 +815,47 @@ function closeNamingSheet() {
 async function runCatch() {
   snapBtn.disabled = true;
   captureFrame();
-  updateStatus("Scanning this photo for a real dog...", "scanning");
-  const details = await detectDogFromSnapshot();
-  if (!details) {
-    clearDetectionBox();
-    lastDetection = null;
-    renderIntel();
-    updateStatus("No dog detected in that shot. Try a clearer dog photo.", "no dog found");
-    snapBtn.disabled = false;
-    return;
-  }
+  setScanState(true, "scan_message");
+  updateStatus(t("scanning_status"), t("scanning_badge"));
+  try {
+    const details = await detectDogFromSnapshot();
+    if (!details) {
+      clearDetectionBox();
+      lastDetection = null;
+      renderIntel();
+      updateStatus(t("no_dog"), t("no_dog_badge"));
+      return;
+    }
 
-  const location = await readLocation();
-  const profile = createDogProfile({
-    ...details,
-    location,
-  });
-  lastDetection = {
-    ...details,
-    location,
-  };
-  resultName.textContent = profile.name;
-  resultBurst.classList.remove("show");
-  void resultBurst.offsetWidth;
-  resultBurst.classList.add("show");
-  updateStatus(
-    "Dog found. Name your new Puppymon to save it.",
-    `dog ${Math.round(profile.detectionScore * 100)}%`,
-  );
-  renderIntel();
-  openNamingSheet(profile);
-  snapBtn.disabled = false;
+    setScanState(true, "scan_message_location");
+    const location = await readLocation();
+    const profile = createDogProfile({
+      ...details,
+      location,
+    });
+    lastDetection = {
+      ...details,
+      location,
+    };
+    resultLabel.textContent = t("result_detected");
+    resultName.textContent = profile.name;
+    resultBurst.classList.remove("show");
+    void resultBurst.offsetWidth;
+    resultBurst.classList.add("show");
+    updateStatus(t("dog_found"), `${Math.round(profile.detectionScore * 100)}%`);
+    renderIntel();
+    renderMap();
+    openNamingSheet(profile);
+  } finally {
+    setScanState(false);
+    snapBtn.disabled = false;
+  }
+}
+
+function setLanguage(lang) {
+  currentLang = lang;
+  localStorage.setItem("puppymon.lang", currentLang);
+  renderAll();
 }
 
 document.querySelectorAll(".tab").forEach((tab) => {
@@ -566,7 +864,14 @@ document.querySelectorAll(".tab").forEach((tab) => {
     document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
     tab.classList.add("active");
     document.querySelector(`#${tab.dataset.view}View`).classList.add("active");
+    if (tab.dataset.view === "map" && map) {
+      setTimeout(() => map.invalidateSize(), 40);
+    }
   });
+});
+
+langToggle.addEventListener("click", () => {
+  setLanguage(currentLang === "en" ? "zh" : "en");
 });
 
 cameraBtn.addEventListener("click", openCamera);
@@ -576,11 +881,12 @@ snapBtn.addEventListener("click", async () => {
     await runCatch();
     return;
   }
-  updateStatus("Opening the phone camera for a fresh catch.", "camera picker");
+  updateStatus(t("camera_opening"), t("camera_picker"));
   photoInput.click();
 });
+
 galleryBtn.addEventListener("click", () => {
-  updateStatus("Opening photo roll. A real dog still needs to be detected to save.", "photo roll");
+  updateStatus(t("opening_photo_roll"), t("photo_roll_badge"));
   photoInput.click();
 });
 
@@ -588,11 +894,12 @@ photoInput.addEventListener("change", async () => {
   const file = photoInput.files?.[0];
   if (!file) return;
   try {
-    updateStatus("Photo received. Checking for a dog...", "photo loaded");
+    updateStatus(t("photo_received"), t("photo_loaded_badge"));
     await loadPhoto(file);
     await runCatch();
   } catch {
-    updateStatus("Could not read that photo. Try another snap.", "photo error");
+    setScanState(false);
+    updateStatus(t("photo_error"), t("photo_error_badge"));
   } finally {
     photoInput.value = "";
   }
@@ -604,13 +911,13 @@ saveCatchBtn.addEventListener("click", () => {
   collection.push(pendingCatch);
   save();
   closeNamingSheet();
-  updateStatus(`${collection[collection.length - 1].name} joined your Puppydex.`, "saved");
+  updateStatus(t("joined_dex", { name: collection[collection.length - 1].name }), t("saved_badge"));
   renderAll();
 });
 
 cancelCatchBtn.addEventListener("click", () => {
   closeNamingSheet();
-  updateStatus("Catch canceled. Nothing was added.", "canceled");
+  updateStatus(t("catch_canceled"), t("canceled_badge"));
 });
 
 closeProfileBtn.addEventListener("click", closeProfileSheet);
@@ -620,15 +927,18 @@ resetBtn.addEventListener("click", () => {
   lastDetection = null;
   save();
   clearDetectionBox();
-  updateStatus("Puppydex cleared. Fresh walk, fresh finds.", "reset");
+  updateStatus(t("dex_reset"), t("reset_badge"));
   renderAll();
 });
 
 window.addEventListener("load", async () => {
+  updateStaticText();
+  ensureMap();
   try {
     await ensureModels();
   } catch {
-    updateStatus("Model load failed. Camera can still open, but detection is unavailable.", "model error");
+    updateStatus(t("model_error"), t("model_error_badge"));
   }
+  await readLocation();
   renderAll();
 });

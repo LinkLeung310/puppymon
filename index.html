@@ -4,23 +4,41 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Puppymon</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
     <link rel="stylesheet" href="./styles.css" />
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+    <script
+      defer
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
   </head>
   <body>
     <main class="app-shell">
       <section class="capture-panel" aria-label="camera capture">
         <header class="topbar">
           <div class="title-block">
-            <p class="kicker">Puppymon</p>
-            <h1>Puppydex</h1>
-            <p class="subcopy">Catch real dogs, keep the photo, save the spot, build a living local dex.</p>
+            <p class="kicker" data-i18n="brand_kicker">Puppymon</p>
+            <h1 data-i18n="brand_title">Puppydex</h1>
+            <p class="subcopy" data-i18n="subcopy">Catch real dogs, keep the photo, save the spot, build a living local dex.</p>
           </div>
-          <div class="score-pill" aria-label="collection count">
+          <div class="toolbar-group">
+            <button class="lang-toggle" id="langToggle" type="button" aria-label="Switch language">
+              <span data-lang="en">EN</span>
+              <span data-lang="zh">中</span>
+            </button>
+            <div class="score-pill" aria-label="collection count">
             <span id="caughtCount">0</span>
-            <span>caught</span>
+              <span data-i18n="caught_label">caught</span>
+            </div>
           </div>
         </header>
 
@@ -32,10 +50,17 @@
           <div class="focus-ring" aria-hidden="true">
             <span></span><span></span><span></span><span></span>
           </div>
-          <div class="detection-chip" id="detectionChip">Model loading...</div>
+          <div class="detection-chip" id="detectionChip" data-i18n="chip_loading">Model loading...</div>
+          <div class="scan-overlay hidden" id="scanOverlay" aria-live="polite">
+            <div class="scan-pulse"></div>
+            <div class="scan-copy">
+              <strong id="scanTitle" data-i18n="scan_title">Scanning for a real dog</strong>
+              <span id="scanMessage" data-i18n="scan_message">Running live dog detection and breed guess...</span>
+            </div>
+          </div>
           <div class="result-burst" id="resultBurst">
             <div class="burst-card">
-              <p id="resultLabel">Dog detected</p>
+              <p id="resultLabel" data-i18n="result_detected">Dog detected</p>
               <strong id="resultName">Mochi</strong>
             </div>
           </div>
@@ -53,7 +78,7 @@
         </div>
 
         <div class="mobile-callout">
-          <p>Best on phone: tap capture, let us detect the dog, then give your new Puppymon a name.</p>
+          <p data-i18n="mobile_callout">Best on phone: tap capture, let us detect the dog, then give your new Puppymon a name.</p>
         </div>
 
         <div class="camera-actions">
@@ -70,28 +95,28 @@
 
         <div class="status-strip" id="statusStrip">
           <span class="dot"></span>
-          <span id="statusText">Loading dog detector...</span>
+          <span id="statusText" data-i18n="status_loading">Loading dog detector...</span>
         </div>
 
         <section class="catch-intel" aria-label="catch intel">
           <div class="section-head compact-head">
-            <h2>Catch Intel</h2>
+            <h2 data-i18n="catch_intel">Catch Intel</h2>
             <span class="mini-label" id="streakBadge">0 streak</span>
           </div>
           <div class="intel-grid">
             <article class="intel-card">
-              <p class="intel-label">Latest scan</p>
+              <p class="intel-label" data-i18n="latest_scan">Latest scan</p>
               <strong id="intelSpecies">Waiting for a dog</strong>
               <p class="intel-copy" id="intelHint">Point the camera at a real dog to unlock a new Puppymon profile.</p>
             </article>
             <article class="intel-card">
-              <p class="intel-label">Field notes</p>
+              <p class="intel-label" data-i18n="field_notes">Field notes</p>
               <div class="intel-tags" id="intelTraits">
                 <span>No traits yet</span>
               </div>
             </article>
             <article class="intel-card">
-              <p class="intel-label">Active zone</p>
+              <p class="intel-label" data-i18n="active_zone">Active zone</p>
               <strong id="intelLocation">Location pending</strong>
               <p class="intel-copy" id="intelConfidence">Detector confidence will appear here.</p>
             </article>
@@ -101,34 +126,33 @@
 
       <section class="collection-panel" aria-label="collection and map">
         <nav class="tabs" aria-label="views">
-          <button class="tab active" data-view="cards">Profiles</button>
-          <button class="tab" data-view="map">Map</button>
-          <button class="tab" data-view="stats">Dex</button>
+          <button class="tab active" data-view="cards" data-i18n="tab_profiles">Profiles</button>
+          <button class="tab" data-view="map" data-i18n="tab_map">Map</button>
+          <button class="tab" data-view="stats" data-i18n="tab_dex">Dex</button>
         </nav>
 
         <div class="view active" id="cardsView">
           <div class="section-head">
-            <h2>Collected Dogs</h2>
-            <button class="mini-btn" id="resetBtn">Reset</button>
+            <h2 data-i18n="collected_dogs">Collected Dogs</h2>
+            <button class="mini-btn" id="resetBtn" data-i18n="reset">Reset</button>
           </div>
           <div class="card-grid" id="cardGrid"></div>
         </div>
 
         <div class="view" id="mapView">
           <div class="section-head">
-            <h2>Catch Map</h2>
-            <span class="mini-label" id="mapMode">location grid</span>
+            <h2 data-i18n="catch_map">Catch Map</h2>
+            <span class="mini-label" id="mapMode">world map</span>
           </div>
-          <div class="map-board" id="mapBoard">
-            <div class="map-grid"></div>
-            <div class="map-center" id="mapCenter">YOU</div>
+          <div class="map-board">
+            <div class="world-map" id="mapBoard"></div>
           </div>
           <p class="map-note" id="mapNote">Location markers appear after capture.</p>
         </div>
 
         <div class="view" id="statsView">
           <div class="section-head">
-            <h2>Puppydex</h2>
+            <h2 data-i18n="puppydex">Puppydex</h2>
             <span class="mini-label" id="rarityMix">fresh run</span>
           </div>
           <div class="stat-list" id="statList"></div>
@@ -138,19 +162,19 @@
 
     <section class="naming-sheet hidden" id="namingSheet" aria-label="name new catch">
       <div class="sheet-card">
-        <p class="sheet-kicker">Dog detected</p>
-        <h2>Name your Puppymon</h2>
+        <p class="sheet-kicker" data-i18n="result_detected">Dog detected</p>
+        <h2 data-i18n="name_your_puppymon">Name your Puppymon</h2>
         <img id="sheetPhoto" alt="Detected dog preview" />
         <div class="sheet-facts">
           <span id="sheetBreed">Breed: scanning...</span>
           <span id="sheetTraits">Traits: scanning...</span>
           <span id="sheetLocation">Spot: locating...</span>
         </div>
-        <label class="sheet-label" for="nameInput">Name</label>
+        <label class="sheet-label" for="nameInput" data-i18n="name_label">Name</label>
         <input id="nameInput" class="sheet-input" type="text" maxlength="24" placeholder="Mochi" />
         <div class="sheet-actions">
-          <button class="mini-btn" id="cancelCatchBtn">Cancel</button>
-          <button class="primary-btn" id="saveCatchBtn">Save catch</button>
+          <button class="mini-btn" id="cancelCatchBtn" data-i18n="cancel">Cancel</button>
+          <button class="primary-btn" id="saveCatchBtn" data-i18n="save_catch">Save catch</button>
         </div>
       </div>
     </section>
@@ -173,7 +197,7 @@
 
     <section class="profile-sheet hidden" id="profileSheet" aria-label="collected dog profile">
       <div class="sheet-card profile-sheet-card">
-        <p class="sheet-kicker">Collected profile</p>
+        <p class="sheet-kicker" data-i18n="collected_profile">Collected profile</p>
         <h2 id="profileName">Puppymon</h2>
         <img id="profilePhoto" alt="Collected dog profile photo" />
         <div class="sheet-facts">
@@ -187,7 +211,7 @@
         <div class="profile-meta-list" id="profileMetaList"></div>
         <div class="bars" id="profileStats"></div>
         <div class="sheet-actions">
-          <button class="primary-btn" id="closeProfileBtn">Back to dex</button>
+          <button class="primary-btn" id="closeProfileBtn" data-i18n="back_to_dex">Back to dex</button>
         </div>
       </div>
     </section>
